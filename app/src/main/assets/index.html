@@ -3,26 +3,31 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>iamokumu</title>
 <style>
-  :root { --name-color:#fff; --tile:150px; --gap:44px; }
+  :root { --tw:9vw; --gap:1.4vw; }
   * { box-sizing:border-box; margin:0; }
   html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:system-ui,Roboto,sans-serif; }
-  body { background:#0b0c1e url("background.jpg") center/cover no-repeat; color:#fff; }
+  body { background:#050510 url("background.jpg") center/cover no-repeat; color:#fff; }
   body::after { content:""; position:fixed; inset:0; pointer-events:none;
-    background:linear-gradient(to top, rgba(0,0,0,.55), transparent 35%), linear-gradient(to bottom, rgba(0,0,0,.35), transparent 20%); }
-  #name { position:fixed; top:4vh; right:4vw; z-index:2; font-size:2.4vw; font-weight:600; letter-spacing:.04em; color:var(--name-color); text-shadow:0 2px 12px rgba(0,0,0,.6); }
-  #row { position:fixed; bottom:7vh; left:0; right:0; z-index:2; display:flex; justify-content:center; gap:var(--gap); }
-  .tile { width:var(--tile); display:flex; flex-direction:column; align-items:center; gap:14px; outline:none; cursor:pointer; transition:transform .15s; }
-  .tile .ic { width:var(--tile); height:var(--tile); border-radius:28px; background:rgba(255,255,255,.12); backdrop-filter:blur(8px);
-    display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:56px; font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,.45); }
-  .tile .ic img { width:100%; height:100%; object-fit:cover; }
-  .tile .lb { font-size:22px; opacity:.85; text-shadow:0 2px 8px rgba(0,0,0,.7); }
+    background:linear-gradient(to top, rgba(0,0,0,.45), transparent 28%); }
+  #menu { position:fixed; top:4.5vh; left:3vw; z-index:3; width:3.4vw; height:3.4vw; min-width:44px; min-height:44px; border-radius:50%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5vw; outline:none; cursor:pointer; transition:transform .15s, background .15s; }
+  #menu i { display:block; width:1.5vw; min-width:20px; height:3px; border-radius:2px; background:#fff; opacity:.85; }
+  #menu:focus { background:rgba(255,255,255,.22); transform:scale(1.15); box-shadow:0 0 0 3px #fff; }
+  #menu:focus i { opacity:1; }
+  #row { position:fixed; bottom:6vh; left:0; right:0; z-index:2; display:flex; justify-content:center; gap:var(--gap); }
+  .tile { width:var(--tw); display:flex; flex-direction:column; align-items:center; gap:.7vw; outline:none; cursor:pointer; transition:transform .15s; }
+  .tile .ic { width:var(--tw); aspect-ratio:16/9; border-radius:.8vw; background:rgba(60,62,80,.85);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:2.2vw; font-weight:700; box-shadow:0 .4vw 1.2vw rgba(0,0,0,.5); }
+  .tile .ic img.banner { width:100%; height:100%; object-fit:cover; }
+  .tile .ic img.icon { height:62%; width:auto; border-radius:.5vw; }
+  .tile .lb { font-size:1.05vw; opacity:0; text-shadow:0 2px 8px rgba(0,0,0,.8); transition:opacity .15s; }
   .tile.missing { opacity:.4; }
-  .tile:focus { transform:scale(1.18); }
-  .tile:focus .ic { box-shadow:0 0 0 5px #fff, 0 12px 32px rgba(0,0,0,.6); }
+  .tile:focus { transform:scale(1.14); }
+  .tile:focus .ic { box-shadow:0 0 0 .22vw #fff, 0 .6vw 1.6vw rgba(0,0,0,.6); }
   .tile:focus .lb { opacity:1; }
 </style></head>
 <body>
-<div id="name">iamokumu</div>
+<div id="menu" tabindex="0" aria-label="Settings"><i></i><i></i><i></i></div>
 <div id="row"></div>
 <script>
 // ---- EDIT HERE: your apps (pkgs = exact package names to try first, labels = fallback name match) ----
@@ -32,15 +37,19 @@ const APPS = [
   { name:"Nuvio",      pkgs:[],                                  labels:["nuvio"] },
   { name:"YouTube",    pkgs:["com.amazon.firetv.youtube","com.google.android.youtube.tv","com.google.android.youtube"], labels:["youtube"] },
 ];
-const row = document.getElementById("row");
+const row = document.getElementById("row"), menu = document.getElementById("menu");
+const openSettings = ()=>{ if(window.Android) Android.openSettings(); };
+menu.onclick = openSettings;
 
-function render(list){
+function render(list, reset){
   row.innerHTML = "";
   list.forEach(a=>{
     const t = document.createElement("div");
     t.className = "tile" + (a.pkg ? "" : " missing"); t.tabIndex = 0;
     const ic = document.createElement("div"); ic.className = "ic";
-    if (a.icon){ const im=new Image(); im.src=a.icon; ic.appendChild(im); } else ic.textContent = a.name[0];
+    if (a.banner){ const im=new Image(); im.className="banner"; im.src=a.banner; ic.appendChild(im); }
+    else if (a.icon){ const im=new Image(); im.className="icon"; im.src=a.icon; ic.appendChild(im); }
+    else ic.textContent = a.name[0];
     const lb = document.createElement("div"); lb.className="lb"; lb.textContent=a.name;
     t.append(ic, lb);
     const go = ()=>{ if(a.pkg && window.Android) Android.launch(a.pkg); };
@@ -48,17 +57,22 @@ function render(list){
     t.onkeydown = e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } };
     row.appendChild(t);
   });
-  if(!document.activeElement || document.activeElement===document.body) row.firstChild && row.firstChild.focus();
+  const ae=document.activeElement;
+  if(reset || !ae || ae===document.body) row.firstChild && row.firstChild.focus();
 }
-window.refreshApps = function(){
+window.refreshApps = function(reset){
   let res;
   try { res = JSON.parse(Android.resolve(JSON.stringify(APPS))); } catch(e){ res = APPS.map(a=>({name:a.name})); }
-  render(res);
+  render(res, reset===true);
 };
 document.addEventListener("keydown", e=>{
-  const tiles=[...row.children]; const i=tiles.indexOf(document.activeElement);
-  if(e.key==="ArrowRight"){ e.preventDefault(); (tiles[i+1]||tiles[i]||tiles[0]).focus(); }
-  if(e.key==="ArrowLeft"){ e.preventDefault(); (tiles[i-1]||tiles[0]).focus(); }
+  const tiles=[...row.children]; const ae=document.activeElement; const i=tiles.indexOf(ae);
+  if(e.key==="ArrowRight" && i>=0){ e.preventDefault(); (tiles[i+1]||tiles[i]).focus(); }
+  else if(e.key==="ArrowLeft" && i>=0){ e.preventDefault(); (tiles[i-1]||tiles[0]).focus(); }
+  else if(e.key==="ArrowUp" && i>=0){ e.preventDefault(); menu.focus(); }
+  else if(e.key==="ArrowDown" && ae===menu){ e.preventDefault(); tiles[0] && tiles[0].focus(); }
+  else if((e.key==="Enter"||e.key===" ") && ae===menu){ e.preventDefault(); openSettings(); }
+  else if(e.key==="ContextMenu"||e.key==="F1"){ e.preventDefault(); openSettings(); }
 });
-refreshApps();
+refreshApps(true);
 </script></body></html>

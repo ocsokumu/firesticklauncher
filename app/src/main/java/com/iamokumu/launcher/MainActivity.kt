@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Base64
 import android.view.View
 import android.webkit.JavascriptInterface
@@ -36,6 +37,12 @@ class MainActivity : Activity() {
         web.evaluateJavascript("window.refreshApps && window.refreshApps()", null)
     }
 
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        // Home button pressed while we are already open: reset to the first tile
+        web.evaluateJavascript("window.refreshApps && window.refreshApps(true)", null)
+    }
+
     override fun onBackPressed() { /* stay on the home screen */ }
 
     private fun hideBars() {
@@ -46,6 +53,8 @@ class MainActivity : Activity() {
     }
 
     inner class Bridge {
+        private val banners = HashMap<String, Drawable?>()
+
         private fun installed(): Map<String, Pair<String, Drawable>> {
             val pm = packageManager
             val out = LinkedHashMap<String, Pair<String, Drawable>>()
@@ -53,17 +62,19 @@ class MainActivity : Activity() {
                 val i = Intent(Intent.ACTION_MAIN).addCategory(cat)
                 for (ri in pm.queryIntentActivities(i, 0)) {
                     val p = ri.activityInfo.packageName
-                    if (!out.containsKey(p)) out[p] = Pair(ri.loadLabel(pm).toString(), ri.loadIcon(pm))
+                    if (!out.containsKey(p)) {
+                        out[p] = Pair(ri.loadLabel(pm).toString(), ri.loadIcon(pm))
+                        banners[p] = try { ri.activityInfo.loadBanner(pm) } catch (e: Exception) { null }
+                    }
                 }
             }
             return out
         }
 
-        private fun png(d: Drawable): String {
-            val s = 160
-            val b = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888)
+        private fun png(d: Drawable, w: Int = 160, h: Int = 160): String {
+            val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val c = Canvas(b)
-            d.setBounds(0, 0, s, s); d.draw(c)
+            d.setBounds(0, 0, w, h); d.draw(c)
             val o = ByteArrayOutputStream()
             b.compress(Bitmap.CompressFormat.PNG, 100, o)
             return "data:image/png;base64," + Base64.encodeToString(o.toByteArray(), Base64.NO_WRAP)
@@ -86,10 +97,19 @@ class MainActivity : Activity() {
                         if (v.first.lowercase().contains(labels.getString(j).lowercase())) { hit = p; break@loop }
                 }
                 val o = JSONObject().put("name", e.getString("name"))
-                if (hit != null) o.put("pkg", hit).put("icon", png(apps[hit]!!.second))
+                if (hit != null) {
+                    o.put("pkg", hit).put("icon", png(apps[hit]!!.second))
+                    banners[hit]?.let { o.put("banner", png(it, 320, 180)) }
+                }
                 res.put(o)
             }
             return res.toString()
+        }
+
+        @JavascriptInterface
+        fun openSettings() {
+            val i = Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try { startActivity(i) } catch (e: Exception) { }
         }
 
         @JavascriptInterface
