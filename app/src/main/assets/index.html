@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iamokumu</title>
+<style>
+  :root { --name-color:#fff; --tile:150px; --gap:44px; }
+  * { box-sizing:border-box; margin:0; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:system-ui,Roboto,sans-serif; }
+  body { background:#0b0c1e url("background.jpg") center/cover no-repeat; color:#fff; }
+  body::after { content:""; position:fixed; inset:0; pointer-events:none;
+    background:linear-gradient(to top, rgba(0,0,0,.55), transparent 35%), linear-gradient(to bottom, rgba(0,0,0,.35), transparent 20%); }
+  #name { position:fixed; top:4vh; right:4vw; z-index:2; font-size:2.4vw; font-weight:600; letter-spacing:.04em; color:var(--name-color); text-shadow:0 2px 12px rgba(0,0,0,.6); }
+  #row { position:fixed; bottom:7vh; left:0; right:0; z-index:2; display:flex; justify-content:center; gap:var(--gap); }
+  .tile { width:var(--tile); display:flex; flex-direction:column; align-items:center; gap:14px; outline:none; cursor:pointer; transition:transform .15s; }
+  .tile .ic { width:var(--tile); height:var(--tile); border-radius:28px; background:rgba(255,255,255,.12); backdrop-filter:blur(8px);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:56px; font-weight:700; box-shadow:0 8px 24px rgba(0,0,0,.45); }
+  .tile .ic img { width:100%; height:100%; object-fit:cover; }
+  .tile .lb { font-size:22px; opacity:.85; text-shadow:0 2px 8px rgba(0,0,0,.7); }
+  .tile.missing { opacity:.4; }
+  .tile:focus { transform:scale(1.18); }
+  .tile:focus .ic { box-shadow:0 0 0 5px #fff, 0 12px 32px rgba(0,0,0,.6); }
+  .tile:focus .lb { opacity:1; }
+</style></head>
+<body>
+<div id="name">iamokumu</div>
+<div id="row"></div>
+<script>
+// ---- EDIT HERE: your apps (pkgs = exact package names to try first, labels = fallback name match) ----
+const APPS = [
+  { name:"Flixvision", pkgs:[],                                  labels:["flixvision","flix vision"] },
+  { name:"Stremio",    pkgs:["com.stremio.one","com.stremio.tv"], labels:["stremio"] },
+  { name:"Nuvio",      pkgs:[],                                  labels:["nuvio"] },
+  { name:"YouTube",    pkgs:["com.amazon.firetv.youtube","com.google.android.youtube.tv","com.google.android.youtube"], labels:["youtube"] },
+];
+const row = document.getElementById("row");
+
+function render(list){
+  row.innerHTML = "";
+  list.forEach(a=>{
+    const t = document.createElement("div");
+    t.className = "tile" + (a.pkg ? "" : " missing"); t.tabIndex = 0;
+    const ic = document.createElement("div"); ic.className = "ic";
+    if (a.icon){ const im=new Image(); im.src=a.icon; ic.appendChild(im); } else ic.textContent = a.name[0];
+    const lb = document.createElement("div"); lb.className="lb"; lb.textContent=a.name;
+    t.append(ic, lb);
+    const go = ()=>{ if(a.pkg && window.Android) Android.launch(a.pkg); };
+    t.onclick = go;
+    t.onkeydown = e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } };
+    row.appendChild(t);
+  });
+  if(!document.activeElement || document.activeElement===document.body) row.firstChild && row.firstChild.focus();
+}
+window.refreshApps = function(){
+  let res;
+  try { res = JSON.parse(Android.resolve(JSON.stringify(APPS))); } catch(e){ res = APPS.map(a=>({name:a.name})); }
+  render(res);
+};
+document.addEventListener("keydown", e=>{
+  const tiles=[...row.children]; const i=tiles.indexOf(document.activeElement);
+  if(e.key==="ArrowRight"){ e.preventDefault(); (tiles[i+1]||tiles[i]||tiles[0]).focus(); }
+  if(e.key==="ArrowLeft"){ e.preventDefault(); (tiles[i-1]||tiles[0]).focus(); }
+});
+refreshApps();
+</script></body></html>
